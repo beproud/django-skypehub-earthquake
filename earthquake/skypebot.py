@@ -22,7 +22,7 @@ logger = logging.getLogger("django.skypehub.earthquake")
 
 MIN_MAGNITUDE=getattr(settings, 'SKYPE_EARTHQUAKE_MIN_MAGNITUDE', 3)
 POLL_INTERVAL=getattr(settings, 'SKYPE_EARTHQUAKE_POLL_INTERVAL', 15)
-PLACES=getattr(settings, 'SKYPE_EARTHQUAKE_PLACES', None)
+PLACES=getattr(settings, 'SKYPE_EARTHQUAKE_PLACES', (('*', '*', '*'),))
 
 def format_intensity(d):
     retval = []
@@ -128,35 +128,30 @@ def poller(handler, time):
 
         place_intensity_hit = False
         if data['place']['area'] != u'不明' and data['intensity_table']:
-            if PLACES is None:
-                place_intensity_hit = data['intensity_table'][0][0] >= (u"震度%s" % MIN_MAGNITUDE)
-                if places_intensity_hit:
-                    logging.info(u"Intensity hit: %s >= %s" % (intensity, (u"震度%s" % MIN_MAGNITUDE)))
-            else:
-                logging.debug("Checking PLACES...")
-                for intensity, intensity_table in data['intensity_table']:
-                    if intensity >= (u"震度%s" % MIN_MAGNITUDE):
-                        for intensity_data in intensity_table:
-                            logging.debug(u"Checking intensity: %s %s %s" % (
-                                intensity_data['prefecture'],
-                                intensity_data['area'],
-                                intensity_data['district'],
+            logging.debug("Checking PLACES...")
+            for intensity, intensity_table in data['intensity_table']:
+                if intensity >= (u"震度%s" % MIN_MAGNITUDE):
+                    for intensity_data in intensity_table:
+                        logging.debug(u"Checking intensity: %s %s %s" % (
+                            intensity_data['prefecture'],
+                            intensity_data['area'],
+                            intensity_data['district'],
+                        ))
+                        for prefecture, area, district in PLACES:
+                            logging.debug(u"Checking area: %s %s %s" % (
+                                force_unicode(prefecture),
+                                force_unicode(area),
+                                force_unicode(district)
                             ))
-                            for prefecture, area, district in PLACES:
-                                logging.debug(u"Checking area: %s %s %s" % (
-                                    force_unicode(prefecture),
-                                    force_unicode(area),
-                                    force_unicode(district)
-                                ))
-                                if ((prefecture == '*' or prefecture == intensity_data['prefecture']) and
-                                   (area == '*' or area == intensity_data['area']) and
-                                   (district == '*' or district == intensity_data['district'])):
-                                    logging.info(u"Intensity hit: %s==%s %s==%s %s==%s (%s >= %s)" % (
-                                        intensity_data['prefecture'], prefecture,
-                                        intensity_data['area'], area,
-                                        intensity_data['district'], district,
-                                        intensity, (u"震度%s" % MIN_MAGNITUDE)))
-                                    place_intensity_hit = True
+                            if ((prefecture == '*' or prefecture == intensity_data['prefecture']) and
+                               (area == '*' or area == intensity_data['area']) and
+                               (district == '*' or district == intensity_data['district'])):
+                                logging.info(u"Intensity hit: %s==%s %s==%s %s==%s (%s >= %s)" % (
+                                    intensity_data['prefecture'], prefecture,
+                                    intensity_data['area'], area,
+                                    intensity_data['district'], district,
+                                    intensity, (u"震度%s" % MIN_MAGNITUDE)))
+                                place_intensity_hit = True
 
 
         if (updated and place_intensity_hit):
