@@ -1,0 +1,67 @@
+django-skypehub-earthquake
+================================
+
+Overview
+-------------------
+
+This bot scrapes data from http://tenki.jp/ and notifies 
+registered skype rooms with information about earthquakes in
+Japan.
+
+**This bot does not provide advanced warning for earthquakes**
+
+It only notifies a skype room after http://tenki.jp/ has been updated
+and generally provides information on an earthquake within a few minutes.
+
+Setup
+---------------
+
+You need to install django-skypehub and set it up based on the instructions
+in that project.
+
+Add 'earthquake' to your installed apps::
+
+    INSTALLED_APPS = (
+        #...
+        'earthquake',
+        #...
+    )
+
+The earthquake bot supports a number of options::
+
+    SKYPE_EARTHQUAKE_POLL_INTERVAL=30
+    SKYPE_EARTHQUAKE_MIN_MAGNITUDE=3
+    SKYPE_EARTHQUAKE_PLACES=(
+        (u'東京', '*', u'渋谷区'),
+        (u'岩手', '*', '*'),
+    )
+
+SKYPE_EARTHQUAKE_POLL_INTERVAL is the interval that http://tenki.jp/
+is polled in seconds. Do not set this too low as it will increase
+your server resources and tenki.jp may block you or this bot altogether.
+The defalt value is 30 seconds.
+
+SKYPE_EARTHQUAKE_PLACES is a three tuple of places affected by the
+earthquake for which you wish to report. The format is 
+prefecture, area, district as given in the intensity table at
+http://tenki.jp/earthquake/. A special value of '*' is supported
+which matches all values. The default value of this settting is
+(('*','*','*'),) which reports on all places.
+
+SKYPE_EARTHQUAKE_MIN_MAGNITUDE is the minimum magnitude to report. If
+SKYPE_EARTHQUAKE_PLACES is specified this will check the magnitude
+of the specified places rather than the maximum magnitude of the
+earthquake.
+
+Usage
+---------------
+
+Register a room with the bot by typing::
+
+    #earthquake on
+
+The bot will register the room and begin notifying when earthquakes
+happen in Japan. You can also use '#earthquake off' to de-register
+a chat room.
+
+The #earthquake command will give info about the last earthquake event.

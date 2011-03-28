@@ -1,0 +1,13 @@
+syntax: glob
+*.pyc
+*.swp
+*.db
+*.pid
+*.log
+*.egg-info
+settings_local.py
+
+syntax: regexp
+^eggs/
+^build/
+^dist/
