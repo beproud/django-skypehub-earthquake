@@ -22,14 +22,18 @@ logger = logging.getLogger("django.skypehub.earthquake")
 
 MIN_MAGNITUDE=getattr(settings, 'SKYPE_EARTHQUAKE_MIN_MAGNITUDE', 3)
 POLL_INTERVAL=getattr(settings, 'SKYPE_EARTHQUAKE_POLL_INTERVAL', 15)
-PLACES=getattr(settings, 'SKYPE_EARTHQUAKE_PLACES', (('*', '*', '*'),))
+PLACES=map(lambda x: map(lambda y: re.compile(y), x), getattr(settings, 'SKYPE_EARTHQUAKE_PLACES', (('.*', '.*', '.*'),)))
 
 def format_intensity(d):
     retval = []
     intensity, places = d
     retval.append(u"""%s:""" % intensity)
     for place in places:
-        retval.append(u"""%(prefecture)s %(area)s %(district)s""" % place)
+        retval.append(u"""%s, %s, %s""" % (
+            place['prefecture'],
+            " ".join(place['area']),
+            " ".join(place['district']),
+        ))
     retval.append("")
     return "\n".join(retval)
 
@@ -143,9 +147,9 @@ def poller(handler, time):
                                 force_unicode(area),
                                 force_unicode(district)
                             ))
-                            if ((prefecture == '*' or prefecture == intensity_data['prefecture']) and
-                               (area == '*' or area == intensity_data['area']) and
-                               (district == '*' or district == intensity_data['district'])):
+                            if (prefecture.match(intensity_data['prefecture']) and
+                               not not filter(lambda a: area.match(a), intensity_data['area']) and
+                               not not filter(lambda d: district.match(d), intensity_data['district'])):
                                 logging.info(u"Intensity hit: %s==%s %s==%s %s==%s (%s >= %s)" % (
                                     intensity_data['prefecture'], prefecture,
                                     intensity_data['area'], area,

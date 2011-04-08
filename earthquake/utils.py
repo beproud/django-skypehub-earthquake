@@ -106,8 +106,8 @@ def scrape(t):
             intensity_table_inner.append(
                 dict(
                     prefecture=row[0].text_content().strip(),
-                    area=row[1].text_content().strip(),
-                    district=row[2].text_content().strip()))
+                    area=row[1].text_content().strip().split(),
+                    district=row[2].text_content().strip().split()))
             rowspan -= 1
     except ValueError, e:
         raise UnexpectedStructureError(e)
