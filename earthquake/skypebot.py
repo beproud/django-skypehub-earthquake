@@ -112,56 +112,58 @@ def poller(handler, time):
         except Event.DoesNotExist:
             last_event = None
 
-        updated=False
-        if last_event is None:
-            logger.info("New event with id %s" % data['id'])
-            last_event = Event.fromdict(data)
-            last_event.save()
-            updated=True
-        elif last_event.updated_at < data['updated_at']:
-            event_dict = last_event.todict()
-            if (event_dict['time'] != data['time'] or
-                    event_dict['magnitude'] != data['magnitude'] or
-                    event_dict['place']['area'] != data['place']['area'] or
-                    event_dict['place']['latitude'] != data['place']['latitude'] or
-                    event_dict['place']['longitude'] != data['place']['longitude'] or
-                    len(event_dict['intensity_table']) != len(data['intensity_table'])):
-                logger.info("Event %s updated" % data['id'])
+        if not last_event.is_notified:
+
+            if last_event is None:
+                logger.info("New event with id %s" % data['id'])
+                last_event = Event.fromdict(data)
+                last_event.save()
+            else:
+                #event_dict = last_event.todict()
+                #if (event_dict['time'] != data['time'] or
+                #        event_dict['magnitude'] != data['magnitude'] or
+                #        event_dict['place']['area'] != data['place']['area'] or
+                #        event_dict['place']['latitude'] != data['place']['latitude'] or
+                #        event_dict['place']['longitude'] != data['place']['longitude'] or
+                #        len(event_dict['intensity_table']) != len(data['intensity_table'])):
+                #logger.info("Event %s updated" % data['id'])
                 last_event.populatewithdict(data)
                 last_event.save()
-                updated=True
 
-        place_intensity_hit = False
-        if data['place']['area'] != u'不明' and data['intensity_table']:
-            logger.debug("Checking PLACES...")
-            for intensity, intensity_table in data['intensity_table']:
-                if intensity >= (u"震度%s" % MIN_MAGNITUDE):
-                    for intensity_data in intensity_table:
-                        logger.debug(u"Checking intensity: %s %s %s" % (
-                            intensity_data['prefecture'],
-                            intensity_data['area'],
-                            intensity_data['district'],
-                        ))
-                        for prefecture, area, district in PLACES:
-                            logger.debug(u"Checking area: %s %s %s" % (
-                                force_unicode(prefecture),
-                                force_unicode(area),
-                                force_unicode(district)
+            place_intensity_hit = False
+            if data['place']['area'] != u'不明' and data['intensity_table']:
+                logger.debug("Checking PLACES...")
+                for intensity, intensity_table in data['intensity_table']:
+                    if intensity >= (u"震度%s" % MIN_MAGNITUDE):
+                        for intensity_data in intensity_table:
+                            logger.debug(u"Checking intensity: %s %s %s" % (
+                                intensity_data['prefecture'],
+                                intensity_data['area'],
+                                intensity_data['district'],
                             ))
-                            if (prefecture.match(intensity_data['prefecture']) and
-                               not not filter(lambda a: area.match(a), intensity_data['area']) and
-                               not not filter(lambda d: district.match(d), intensity_data['district'])):
-                                logging.info(u"Intensity hit: %s==%s %s==%s %s==%s (%s >= %s)" % (
-                                    intensity_data['prefecture'], prefecture,
-                                    intensity_data['area'], area,
-                                    intensity_data['district'], district,
-                                    intensity, (u"震度%s" % MIN_MAGNITUDE)))
-                                place_intensity_hit = True
+                            for prefecture, area, district in PLACES:
+                                logger.debug(u"Checking area: %s %s %s" % (
+                                    force_unicode(prefecture),
+                                    force_unicode(area),
+                                    force_unicode(district)
+                                ))
+                                if (prefecture.match(intensity_data['prefecture']) and
+                                   not not filter(lambda a: area.match(a), intensity_data['area']) and
+                                   not not filter(lambda d: district.match(d), intensity_data['district'])):
+                                    logging.info(u"Intensity hit: %s==%s %s==%s %s==%s (%s >= %s)" % (
+                                        intensity_data['prefecture'], prefecture,
+                                        intensity_data['area'], area,
+                                        intensity_data['district'], district,
+                                        intensity, (u"震度%s" % MIN_MAGNITUDE)))
+                                    place_intensity_hit = True
 
-
-        if (updated and place_intensity_hit):
-            for room in BroadcastRoom.objects.all():
-                handler.skype.Chat(room.chat_name).SendMessage(format_event(data))
+            if place_intensity_hit:
+                last_event.is_notified = True
+                last_event.save()
+                for room in BroadcastRoom.objects.all():
+                    handler.skype.Chat(room.chat_name).SendMessage(format_event(data))
+        else:
+            logger.info("Aldeady notified event %s" % last_event.id)
     except Exception, e:
         logger.exception(str(e))
     handler.connect(poller, time + POLL_INTERVAL)

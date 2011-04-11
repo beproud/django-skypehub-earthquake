@@ -30,6 +30,7 @@ class Event(models.Model):
     intensity_table = models.TextField()
     updated_at = models.DateTimeField()
     timestamp = models.DateTimeField()
+    is_notified = models.BooleanField(default=False)
 
     def todict(self):
         return dict(
