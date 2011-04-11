@@ -16,7 +16,7 @@ from django.conf import settings
 
 from django.utils.encoding import force_unicode
 
-TENKI_JP_URL = "http://tenki.jp/earthquake/"
+TENKI_JP_URL = getattr(settings, 'SKYPE_EARTHQUAKE_TENKI_JP_URL', "http://tenki.jp/earthquake/")
 
 logger = logging.getLogger("django.skypehub.earthquake")
 
@@ -105,6 +105,7 @@ def receiver(handler, message, status):
 
 def poller(handler, time):
     try:
+        logger.info("Fetching %s" % TENKI_JP_URL)
         data = scrape(html.parse(TENKI_JP_URL))
         try:
             last_event = Event.objects.get(event_id=data['id'])
@@ -132,17 +133,17 @@ def poller(handler, time):
 
         place_intensity_hit = False
         if data['place']['area'] != u'不明' and data['intensity_table']:
-            logging.debug("Checking PLACES...")
+            logger.debug("Checking PLACES...")
             for intensity, intensity_table in data['intensity_table']:
                 if intensity >= (u"震度%s" % MIN_MAGNITUDE):
                     for intensity_data in intensity_table:
-                        logging.debug(u"Checking intensity: %s %s %s" % (
+                        logger.debug(u"Checking intensity: %s %s %s" % (
                             intensity_data['prefecture'],
                             intensity_data['area'],
                             intensity_data['district'],
                         ))
                         for prefecture, area, district in PLACES:
-                            logging.debug(u"Checking area: %s %s %s" % (
+                            logger.debug(u"Checking area: %s %s %s" % (
                                 force_unicode(prefecture),
                                 force_unicode(area),
                                 force_unicode(district)
